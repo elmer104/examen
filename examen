@@ -1,0 +1,532 @@
+#include <conio.h>
+#include <iostream>
+#include <stdio.h>
+#include <windows.h>
+ void gotoxy(int x,int y){
+      HANDLE hcon;
+      hcon = GetStdHandle(STD_OUTPUT_HANDLE);
+      COORD dwPos;
+      dwPos.X = x;
+      dwPos.Y= y;
+      SetConsoleCursorPosition(hcon,dwPos);
+ }
+using namespace std;
+typedef struct nodo{
+    int dato;
+    struct nodo *izq, *dere, *padre;
+    int fe, alturaIzq, alturaDere;
+    char nombre[30];
+    char  precio[20];
+    char existencia[10];
+}arbol, *parbol;
+int sw=0; // Si es 1= insertar, 0=fe
+arbol *raiz, *nuevo, *recorrer; //Crea las estructuras de tipo puntero.
+int buscado=0; //Variable para guardar un valor buscado
+arbol *PadreAB, *sHijo, *predecesor, *abuelo, *hijoHijo;
+//Recorridos pre, in, post
+void preorden(arbol *recorrer);
+void inorden(arbol *recorrer);
+void postorden(arbol *recorrer);
+void insertarNuevo(arbol *recorrer, arbol *nuevo, arbol *padre);
+void agregarDatos();
+int exiteenArbol(arbol *recorrer, int buscado);
+void verArbol(arbol recorrer, int n);
+void graficarArbol(arbol, int, int);
+void eliminarNodo(arbol *recorrer, int buscado);
+void estadoFactorEquilibrio(arbol *recorrer);
+void necesidadEquilibrar(arbol *recorrer);
+void vaciarArbol(arbol *recorrer);
+//funciones que reestructuran el árbol
+void rotarII();
+void rotarDD();
+void rotarID();
+void rotarDI();
+parbol nuevoNodo();
+parbol nuevoNodo(){
+    nuevo = new (arbol);
+    cout<<"Ingrese  Codigo: "; cin>>nuevo->dato;
+    cout<<"Ingrese  Nombre: "; cin>>nuevo->nombre;
+    cout<<"Ingrese  Precio Q"; cin>>nuevo->precio;
+    cout<<"Ingrese  Existencia: "; cin>>nuevo->existencia;
+    cout<<endl;
+    nuevo->izq=NULL;
+    nuevo->dere=NULL;
+    nuevo->alturaIzq=0;
+    nuevo->alturaDere=0;
+    nuevo->fe= nuevo->alturaDere-nuevo->alturaIzq; //Calculo del factor equilibrio, podría asignarse el valor cero desde la entrada.
+    return nuevo;
+}
+void insertarNuevo(arbol *recorrer, arbol *nuevo, arbol *PadreAB){
+    if (raiz==NULL){ //Si es el primer nodo entonces la raíz aún será nula porque no existe nada dentro de ella.
+        raiz=nuevo; //Asignar a la raíz el valor del nuevo nodo creado...
+        raiz->padre=NULL;
+    }else{
+        if(nuevo->dato <= recorrer->dato){
+            if(recorrer->izq!=NULL){
+                PadreAB=recorrer->izq;
+                insertarNuevo(recorrer->izq, nuevo, PadreAB);
+            }else{
+                recorrer->izq=nuevo;
+                nuevo->padre=PadreAB;
+                return;
+            }
+        }else if (nuevo->dato > recorrer->dato){
+            if (recorrer->dere!=NULL){
+                PadreAB=recorrer->dere;
+                insertarNuevo(recorrer->dere, nuevo, PadreAB);
+            }else{
+                recorrer->dere=nuevo;
+                nuevo->padre=PadreAB;
+                return;
+            }}}}
+void estadoFactorEquilibrio(arbol *recorrer){
+    if (recorrer != NULL) {
+        cout<<"Dato: "<<recorrer->dato<<endl;
+        cout<<"Izquierda: "<<recorrer->alturaIzq<< ", Derecha: "<<recorrer->alturaDere<<", Factor de Equilibrio: "<<recorrer->fe<<endl;
+        estadoFactorEquilibrio(recorrer->izq);
+        estadoFactorEquilibrio(recorrer->dere);
+    }}
+void preorden(arbol *recorrer){
+    if (recorrer != NULL) {
+        cout<<"\n Codigo: "<<recorrer->dato<<endl;
+        cout<<"Nombre: "<<recorrer->nombre<<endl;
+        cout<<"Precio Q: "<<recorrer->precio<<endl;
+        cout<<"Existencia: "<<recorrer->existencia<<endl;
+        preorden(recorrer->izq);
+        preorden(recorrer->dere);
+    }}
+void inorden(arbol *recorrer){
+    if (recorrer != NULL) {
+        inorden(recorrer->izq);
+        cout<<"\nCodigo: "<<recorrer->dato<<endl;
+        cout<<"Nombre: "<<recorrer->nombre<<endl;
+        cout<<"Precio Q: "<<recorrer->precio<<endl;
+        cout<<"Existencia: "<<recorrer->existencia<<endl;
+        inorden(recorrer->dere);
+    }}
+void postorden(arbol *recorrer){
+    if (recorrer != NULL) {
+        postorden(recorrer->izq);
+        postorden(recorrer->dere);
+        cout<<"\nCodigo: "<<recorrer->dato<<endl;
+        cout<<"Nombre: "<<recorrer->nombre<<endl;
+        cout<<"Precio Q: "<<recorrer->precio<<endl;
+        cout<<"Existencia: "<<recorrer->existencia<<endl;
+    } }
+void vaciarArbol(arbol *recorrer){
+    if (recorrer != NULL) {
+        postorden(recorrer->izq);
+        postorden(recorrer->dere);
+        if (recorrer->dato == raiz->dato){
+            raiz=NULL;
+        }else{
+            delete(recorrer);//Liberamos la memoria.
+        } }}
+void verArbol(arbol *recorrer, int n){
+     if(recorrer==NULL)
+          return;
+     verArbol(recorrer->dere, n+1);
+     for(int i=0; i<n; i++)
+         cout<<"   ";
+     cout<< recorrer->dato <<endl;
+     verArbol(recorrer->izq, n+1); }
+void graficarArbol(arbol *recorrer, int x, int y){
+    if(recorrer==NULL)
+        return;
+    graficarArbol(recorrer->dere, x+5, y+1);
+    gotoxy(x,y); printf("%d", recorrer->dato);
+    graficarArbol(recorrer->izq, x-5, y+1); }
+//Función para buscar un dato en el árbol según si es mayor o menor así mismo va navegando en el arbol hasta encontrar el dato buscado.
+int existeNodo=0; //Si es 0 no existe, y si es 1 si existe.
+int buscarDato(arbol *recorrer, int buscado){
+    if (recorrer==NULL){
+        cout<<"Arbol Vacio o el articulo  no existe"<<endl;
+    }else{
+        if(buscado<recorrer->dato){
+            buscarDato(recorrer->izq, buscado);
+        }else if (buscado>recorrer->dato){
+            buscarDato(recorrer->dere, buscado);
+        }else{
+            existeNodo=1;
+            PadreAB=recorrer->padre;
+            cout<<"\n\nEl Articulo  existe"<<endl;
+            cout<<"Codigo: "<<recorrer->dato<<endl;
+            cout<<"Nombre: "<<recorrer->nombre<<endl;
+            cout<<"Precio Q: "<<recorrer->precio<<endl;
+            cout<<"Existencia: "<<recorrer->existencia<<endl;
+            return existeNodo;
+        } }}
+int exiteenArbol(arbol *recorrer, int buscado){
+    if (recorrer==NULL){
+        return 1;
+    }else{
+        if(buscado<recorrer->dato){
+            exiteenArbol(recorrer->izq, buscado);
+        }else if (buscado>recorrer->dato){
+            exiteenArbol(recorrer->dere, buscado);
+        }else{
+            return 0;
+        } }}
+arbol *analizarAB;
+void arbolVacio(arbol *recorrer, int buscado){
+    analizarAB=recorrer;
+    bool existeNodo=false;
+
+    if (analizarAB==NULL){
+        cout<<"Arbol Vacio"<<endl;
+        return;
+    }else{
+        if(analizarAB->dato==buscado){
+            cout<<"No se puede eliminar la Raiz"<<endl;
+            return;
+        }
+        else{
+            eliminarNodo(recorrer, buscado);
+        } } }
+void eliminarNodo(arbol *recorrer, int buscado){
+    if (recorrer!=NULL){
+        if(buscado < recorrer->dato){
+            PadreAB=recorrer;
+            eliminarNodo(recorrer->izq, buscado);
+        }else if(buscado > recorrer->dato){
+            PadreAB=recorrer;
+            eliminarNodo(recorrer->dere, buscado);
+        }else{
+            //El elemento a eliminar es hoja, aplica al caso 1
+            if (recorrer->izq==NULL && recorrer->dere==NULL){
+                if(PadreAB->izq==recorrer){
+                    PadreAB->izq=NULL;
+                    delete(recorrer);
+                }else{
+                    PadreAB->dere=NULL;
+                    delete(recorrer);
+                }
+            }else
+                 if((recorrer->izq == NULL && recorrer->dere != NULL)|| (recorrer->izq != NULL && recorrer->dere == NULL)){	//Condiciones para aplicar al caso 2
+
+                    if(recorrer->izq == NULL && recorrer->dere != NULL){ //Detectando el hijo del nodo a eliminar, si el hijo está a la derecha...
+                        sHijo=recorrer->dere;
+                        //abuelo=recorrer->padre;
+                        if(PadreAB->izq==recorrer){
+                            PadreAB->izq=sHijo;
+                            sHijo->padre=PadreAB;
+                            delete(recorrer); //Liberamos la memoria del nodo descartado...
+                        }else{ //Si el nodo a eliminar no estaba a la izquierda del Padre, entonces estará a la derecha...
+                            PadreAB->dere=sHijo;
+                            sHijo->padre=PadreAB;
+                            delete(recorrer); //Liberamos la memoria del nodo descartado...
+                        }
+                    }else{
+                        sHijo=recorrer->izq;//Guardamos la dirección del nodo hijo
+                        if(PadreAB->izq==recorrer){
+                            PadreAB->izq=sHijo;
+                            sHijo->padre=PadreAB;
+                            delete(recorrer);
+                        }else{ 
+                            PadreAB->dere=sHijo;
+                            sHijo->padre=PadreAB;
+                            delete(recorrer);//Liberamos la memoria del nodo descartado...
+                      }    }
+                }else{
+                         if(recorrer->izq != NULL && recorrer->dere != NULL){
+                        predecesor=recorrer->izq;
+                        if(predecesor->izq == NULL && predecesor->dere ==NULL){ //Si las partes izquierda y derecha son nulas entonces el nodo a subir no tiene hijos y además es el predecesor que sustituirá al nodo a eliminar.
+                            recorrer->dato=predecesor->dato;
+                            recorrer->izq=NULL;
+                            delete(predecesor);
+                            predecesor=recorrer->dere;
+                            if(predecesor->izq == NULL && predecesor->dere ==NULL){ //Si las partes izquierda y derecha son nulas entonces el nodo a subir no tiene hijos y además es el predecesor que sustituirá al nodo a eliminar.
+                                recorrer->dato=predecesor->dato;
+                                recorrer->dere=NULL;
+                                delete(predecesor);
+                            }else{
+                                predecesor=recorrer->izq;
+                                if(predecesor->dere==NULL){
+                                    recorrer->dato=predecesor->dato;
+                                    recorrer->izq=predecesor->izq;
+                                    sHijo=predecesor->izq;
+                                    sHijo->padre=recorrer;
+                                    delete(predecesor);
+                                }else{
+                                    predecesor=recorrer->dere;
+                                    if(predecesor->izq==NULL){
+                                    recorrer->dato=predecesor->dato;
+                                    recorrer->dere=predecesor->dere;
+                                    sHijo=predecesor->dere;
+                                    sHijo->padre=recorrer;
+                                    delete(predecesor);
+                                    }else{
+                                        predecesor=recorrer->izq;
+                                        sHijo=predecesor; //Hacemos una copia de la posición de predecesor
+
+                                        while(sHijo->dere!=NULL){
+                                            predecesor=sHijo; //Guardar la posición anterior en predecesor y el Hijo estará una posición adelante.
+                                            sHijo=sHijo->dere; //Nos movemos una posición más adelante para el siguiente ciclo.
+                                        }
+                                        recorrer->dato=sHijo->dato; //Asignamos al nodo a eliminar el dato de valor mas a la derecha de la rama izquierda
+                                        predecesor->dere=sHijo->izq;
+                                        hijoHijo=sHijo->izq;
+                                        hijoHijo->padre=predecesor;
+
+                                        delete(sHijo);
+                                    }}}}}}}
+    }else{
+        cout<<"El articulo no se encuentra en el arbol"<<endl;
+    }
+}
+
+int altura(arbol *recorrer){
+    if (recorrer == NULL)//Si el nodo está vació entonces que salga.
+        return 0 ; //Devuelve el valor cero.
+    else{
+        recorrer->alturaIzq=altura (recorrer->izq);
+        recorrer->alturaDere=altura (recorrer->dere);
+        recorrer->fe=recorrer->alturaDere-recorrer->alturaIzq;
+        if (recorrer->alturaIzq > recorrer->alturaDere)
+            return recorrer->alturaIzq + 1;
+        else
+            return recorrer->alturaDere + 1;
+    }}
+void necesidadEquilibrar(arbol *recorrer){ //Con esta función analizo si es necesario equilibrar el árbol, esta función busca el valor -2 o 2.
+    if (recorrer != NULL) {
+        necesidadEquilibrar(recorrer->izq);
+        necesidadEquilibrar(recorrer->dere);
+        if ((recorrer->fe==2)||(recorrer->fe==-2)){
+            system("cls");
+            cout<<"Es necesario equilibrar el arbol"<<endl;
+            PadreAB=recorrer;
+            sHijo=PadreAB->dere;
+            //Identificar Si es el caso  RDD, Rotación Derecha, Derecha.
+            if ((PadreAB->fe>1)&&(sHijo->fe>0)){
+                cout<<"Rotacion derecha derecha."<<endl;
+                cout<<" Padre: "<<PadreAB->dato<<" Hijo: "<<sHijo->dato<<endl;
+                getch();
+                rotarDD();
+                altura(raiz);
+                return;
+            //Identificar Si es el caso  RDI, Rotación Derecha, Izquierda.
+            }else if((PadreAB->fe>1)&&(sHijo->fe<0)){
+                cout<<"Rotacion derecha izquierda."<<endl;
+                cout<<" Padre: "<<PadreAB->dato<<" Hijo: "<<sHijo->dato<<endl;
+                getch();
+                rotarDI();
+                altura(raiz);
+                return;
+            }else{
+                PadreAB=recorrer;
+                sHijo=PadreAB->izq;
+                //Identificar Si es el caso  RII, Rotación Izquierda, Izquierda.
+                if((PadreAB->fe<-1)&&(sHijo->fe<0)){
+                    cout<<"Rotacion izquierda izquierda."<<endl;
+                    cout<<" Padre: "<<PadreAB->dato<<" Hijo: "<<sHijo->dato<<endl;
+                    getch();
+                    rotarII();
+                    altura(raiz);
+                    return;
+                //Identificar Si es el caso  RID, Rotación Izquierda, Derecha.
+                }else if((PadreAB->fe<-1)&&(sHijo->fe>0)){
+                    cout<<"Rotacion izquierda Derecha."<<endl;
+                    cout<<" Padre: "<<PadreAB->dato<<" Hijo: "<<sHijo->dato<<endl;
+                    getch();
+                    rotarID();
+                    altura(raiz);
+                    return;
+                }
+            }
+            return;
+        }}}
+//Rotación Derecha Izquierda
+void rotarDI(){
+    if (PadreAB==raiz){
+        hijoHijo=sHijo->izq; //Ubico al hijo del hijo...
+        raiz=hijoHijo; 
+        hijoHijo->padre=NULL; 
+        hijoHijo->dere=sHijo;
+        sHijo->padre=hijoHijo; 
+        if(sHijo->izq!=NULL){
+            sHijo->izq=hijoHijo->izq;
+        }else{
+            sHijo->izq=NULL; //Apuntar a Null la parte izquierda del hijo, ya que ahora no tendrá hijos...
+        }
+        hijoHijo->izq=PadreAB; 
+        if(PadreAB->izq==NULL){
+            PadreAB->izq=NULL;
+        }
+        PadreAB->dere=NULL; //el antiguo padre debe apuntar ahora a null
+        PadreAB->padre=hijoHijo; 
+    }else{
+        abuelo=PadreAB->padre;
+        hijoHijo=sHijo->izq; //Ubico al hijo del hijo...
+        hijoHijo->padre=abuelo; 
+        hijoHijo->dere=sHijo; // el nuevo padre debe apuntar al hijo izquierdo.
+        sHijo->padre=hijoHijo; 
+        if(sHijo->izq!=NULL){
+            sHijo->izq=hijoHijo->izq;
+        }else{
+            sHijo->izq=NULL; 
+        }
+        hijoHijo->izq=PadreAB; 
+        if(PadreAB->izq==NULL){
+            PadreAB->izq=NULL;
+        }
+        PadreAB->dere=NULL; //el antiguo padre debe apuntar ahora a null
+        PadreAB->padre=hijoHijo; 
+        abuelo->dere=hijoHijo;
+    }
+}
+//Rotación  Izquierda Derecha
+void rotarID(){
+    if (PadreAB==raiz){
+       hijoHijo=sHijo->dere; //Ubico al hijo del hijo...
+       raiz=hijoHijo;
+       hijoHijo->padre=NULL;
+       hijoHijo->izq=sHijo;
+       sHijo->padre=hijoHijo; 
+       sHijo->dere=NULL; 
+       PadreAB->izq=NULL;
+       hijoHijo->dere=PadreAB; 
+        if(PadreAB->dere==NULL){
+            PadreAB->dere=NULL;
+        }
+        PadreAB->padre=hijoHijo; //Apuntar al nuevo padre ...
+    }else{
+       abuelo=PadreAB->padre;
+        hijoHijo=sHijo->dere; 
+        hijoHijo->padre=abuelo; 
+        abuelo->izq=hijoHijo;
+        hijoHijo->izq=sHijo; 
+        sHijo->padre=hijoHijo; 
+        sHijo->dere=NULL;
+        hijoHijo->dere=PadreAB; 
+        PadreAB->izq=NULL;
+        if(PadreAB->dere==NULL){
+            PadreAB->dere=NULL; 
+        }
+        PadreAB->padre=hijoHijo; //Apuntar al nuevo padre ...
+    }
+}
+void rotarDD(){
+    if (PadreAB==raiz){
+        raiz=sHijo;
+         sHijo->izq=PadreAB;
+        PadreAB->padre=sHijo;
+        PadreAB->dere=NULL;
+        sHijo->padre=NULL;
+    }else{
+        abuelo=PadreAB->padre;
+        abuelo->dere=PadreAB->dere;
+        sHijo->padre=abuelo;
+        sHijo->izq=PadreAB;
+        PadreAB->padre=sHijo;
+        PadreAB->dere=NULL;
+    } }
+void rotarII(){
+    if(PadreAB==raiz){
+        raiz=sHijo;
+        hijoHijo=sHijo->izq;
+        sHijo->dere=PadreAB;
+        PadreAB->izq=NULL;
+        PadreAB->padre=sHijo;
+        sHijo->padre=NULL;
+    }else{
+        abuelo=PadreAB->padre;
+        abuelo->izq=PadreAB->izq;
+        sHijo->padre=abuelo;
+        sHijo->dere=PadreAB;
+        PadreAB->padre=sHijo;
+        PadreAB->izq=NULL;
+        PadreAB->izq=NULL;
+        PadreAB->izq=NULL;
+        PadreAB->izq=NULL;
+        PadreAB->izq=NULL;
+    }}
+void agregarDatos(){
+    system("cls");
+    int x;
+    cout<<"\n \t Cuantos articulo desea insertar: ";cin>>x;
+    for (int i=1; i<=x;i++){
+        cout<<"\n \t \t Ingrese articulos "<<i<<endl;
+        recorrer=raiz; //Se apunta a recorrer en al mismo nodo donde apunta la raíz
+        nuevo=nuevoNodo(); //Almacena el nuevo nodo para luego insertarlo en el arbol.
+        if (nuevo->dato!=0){
+            if (exiteenArbol(recorrer, nuevo->dato)==1){ //Evalua si el nodo ya existe en el arbol.
+                PadreAB=raiz;
+                insertarNuevo(recorrer, nuevo, PadreAB);
+            }else{
+                cout<<"El numero ya existe en el arbol"<<endl;
+                getch(); }
+        }else{
+            vaciarArbol(raiz);
+            system("cls");
+            verArbol(raiz, 0);
+            cout<<"El arbol ha sido eliminado porque ingreso el numero cero "<<endl;
+            getch();
+            i=x;
+            return;
+        }
+        verArbol(raiz,0);
+        getch();
+    }}
+int main(){
+    int opcion=0;
+    while (opcion!=8){
+        system("cls");
+        cout<<"\n *****  VENTA DE ARTICULOS  ****\n\n";
+        cout<<"1.  Ingreso de  articulo \n";
+        cout<<"2   Busqueda de articulo \n";
+        cout<<"3.  Recorridos de arbol\n";
+        cout<<"4.  Eliminar articulo\n";
+        cout<<"5.  Altura del arbol\n";
+        cout<<"6.  Graficar Arbol\n";
+        cout<<"7.  Vaciar el arbol\n";
+        cout<<"8.  Salir\n";
+        cout<<"Seleccione una opcion: ";
+        cin>>opcion;
+         recorrer=raiz;
+        switch(opcion){
+            case 1:  agregarDatos();  break;
+            case 2:  cout<<"Buscar Articulo: ";cin>>buscado;
+            buscarDato(recorrer, buscado);
+            getch();
+            break;
+            case 3:
+            system("cls");
+            cout<<"____________RECORRIDO DE ARBOLES__________"<<endl;
+            cout<<"1  Pre orden"<<endl;
+            cout<<"2  En  orden"<<endl;
+            cout<<"3  Post orden"<<endl;
+            cin >>opcion;
+            switch (opcion) {
+            case 1:  cout<<"\n____________PREORDEN__________"<<endl;
+                preorden(recorrer);
+                getch();
+                break;
+            case 2:   cout<<"\n____________ENORDEN__________"<<endl;
+                inorden(recorrer);
+                getch();
+                break;
+            case 3: cout<<"\n____________POSTORDEN__________"<<endl;
+                postorden(recorrer);
+                getch();
+                break;}   break;
+            case 4:cout<<"Articulo a eliminar: ";cin>>buscado;
+            arbolVacio(recorrer, buscado); //Evalua si existe, luego procede a eliminar.
+            recorrer=raiz; //Volver a asinar a recorrer el puntero raiz
+            cout<<"\n ELiminado correctamente";
+            getch();
+            break;
+            case 5:  cout<<"La Altura del arbol es: "<<altura(recorrer)<<endl;
+            getch();   break;
+            case 6:   system("cls");
+            gotoxy(25,2);  cout<<"____________ARBOL AVL__________"<<endl;
+            graficarArbol(recorrer, 40, 5);
+            getch();   break;
+            case 7:   cout <<"Vaciar Arbol"<<endl;
+            vaciarArbol(recorrer);
+            getch();    break;
+        case 8:  cout <<"Hasta la proxima \n"; break;
+            default:
+                cout<<"No es una opcion correcta";
+                break;  }}
+    return 0;
+}
